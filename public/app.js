@@ -68,9 +68,9 @@ socket.on('load_wishes', (wishes) => {
     container.innerHTML = '';
     wishesArray.length = 0; // Reset
     
-    // Always persist the logo and decorative hearts whenever we refresh the screen from database state
+    // Always persist the logo and decorative icons whenever we refresh the screen from database state
     initLogo();
-    spawnDecorativeHearts(12); // Spawn 12 background mini-hearts
+    spawnDecorativeIcons(16); // Spawn 16 background glass icons
     
     wishes.forEach(wish => {
         createBubble(wish);
@@ -235,7 +235,12 @@ function updatePhysics() {
     // Render positioning
     for (let i = 0; i < wishesArray.length; i++) {
         let b = wishesArray[i];
-        b.el.style.transform = `translate(${b.x - b.radius}px, ${b.y - b.radius}px)`;
+        if (b.isDecorative && b.rot !== undefined) {
+            b.rot += b.rotSpeed;
+            b.el.style.transform = `translate(${b.x - b.radius}px, ${b.y - b.radius}px) rotate(${b.rot}deg)`;
+        } else {
+            b.el.style.transform = `translate(${b.x - b.radius}px, ${b.y - b.radius}px)`;
+        }
     }
 
     requestAnimationFrame(updatePhysics);
@@ -286,24 +291,44 @@ function initLogo() {
     });
 }
 
-// Spawns permanent, small decorative stars
-function spawnDecorativeHearts(count) {
+const glassIconSvgs = [
+    // Star
+    `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>`,
+    // Paper Plane
+    `<line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>`,
+    // Footprints
+    `<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/>`,
+    // Mustache
+    `<path d="M2 14c2.5-3 6-3 8-1 1.5 1.5 2.5 1.5 4 0 2-2 5.5-2 8 1-2 5-6 5-8 3-1.5-1-2.5-1-4 0-2 2-6 2-8-3z"/>`,
+    // Tools
+    `<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>`,
+    // Watch
+    `<circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.51 17.35l-.35 3.83a2 2 0 0 1-2 1.82H9.83a2 2 0 0 1-2-1.82l-.35-3.83m.01-10.7l.35-3.83A2 2 0 0 1 9.83 1h4.35a2 2 0 0 1 2 1.82l.35 3.83"/>`,
+    // Crown
+    `<polygon points="2 20 22 20 19 6 15 11 12 4 9 11 5 6 2 20"/>`,
+    // Compass
+    `<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>`
+];
+
+// Spawns permanent, decorative glassmorphism icons
+function spawnDecorativeIcons(count) {
     for (let i = 0; i < count; i++) {
         const bubbleWrapper = document.createElement('div');
-        bubbleWrapper.classList.add('star');
+        bubbleWrapper.classList.add('glass-icon');
+        
+        const randomSvgContent = glassIconSvgs[Math.floor(Math.random() * glassIconSvgs.length)];
+        bubbleWrapper.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${randomSvgContent}</svg>`;
         
         container.appendChild(bubbleWrapper);
         
-        let targetR = 2 + Math.random() * 3; // Small size
+        let targetR = 20 + Math.random() * 15; // Size between 20 and 35
         const x = targetR + Math.random() * (window.innerWidth - targetR * 2);
         const y = targetR + Math.random() * (window.innerHeight - targetR * 2);
-        const vx = (Math.random() - 0.5) * 1; // Slower movement
-        const vy = (Math.random() - 0.5) * 1;
+        const vx = (Math.random() - 0.5) * 1.5; 
+        const vy = (Math.random() - 0.5) * 1.5;
         
         bubbleWrapper.style.width = `${targetR * 2}px`;
         bubbleWrapper.style.height = `${targetR * 2}px`;
-        bubbleWrapper.style.background = '#c0c0c0'; // Silver color
-        bubbleWrapper.style.opacity = 0.5 + Math.random() * 0.5;
         
         wishesArray.push({
             id: 'decorative_' + i,
@@ -311,7 +336,9 @@ function spawnDecorativeHearts(count) {
             x, y, vx, vy,
             radius: targetR,
             targetRadius: targetR,
-            isDecorative: true
+            isDecorative: true,
+            rot: Math.random() * 360,
+            rotSpeed: (Math.random() - 0.5) * 1.5
         });
     }
 }

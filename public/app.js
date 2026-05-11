@@ -130,9 +130,11 @@ function createBubble(wish) {
     // Calculate initial target radius dynamically based on text length
     // We apply a gentle scale-down for mobile devices to prevent completely dominating the screen
     let viewportScale = window.innerWidth < 600 ? 0.75 : 1;
-    let calculatedR = 45 + (wish.text.length * 1.2);
+    // Keep the polaroid cards more compact since we now auto-size the fonts.
+    let calculatedR = 55 + (wish.text.length * 0.3);
     
-    let targetR = Math.max(60 * viewportScale, calculatedR * viewportScale);
+    // Cap maximum radius so the boards don't get huge
+    let targetR = Math.max(55 * viewportScale, Math.min(85 * viewportScale, calculatedR * viewportScale));
 
     // Shrink all existing wishes so the screen doesn't fill up permanently
     wishesArray.forEach(b => {
@@ -163,10 +165,10 @@ function updatePhysics() {
         // Font size relative to radius and text length
         if (b.textSpan) {
             const textLen = b.textSpan.innerText.length || 1;
-            // The longer the text, the smaller the font size relative to the radius
-            let dynamicSize = (b.radius * 1.4) / Math.sqrt(textLen);
+            // Scale up the base multiplier so the text fills more of the available space
+            let dynamicSize = (b.radius * 1.8) / Math.sqrt(textLen);
             // Cap the maximum font size so 1-letter words don't overflow
-            b.textSpan.style.fontSize = `${Math.min(b.radius * 0.4, dynamicSize)}px`;
+            b.textSpan.style.fontSize = `${Math.min(b.radius * 0.45, dynamicSize)}px`;
         }
 
         // Update position

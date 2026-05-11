@@ -1,7 +1,7 @@
 {
-  "name": "mothersdaywishes",
+  "name": "fathersdaywishes",
   "version": "1.0.0",
-  "description": "Real-time Mother's Day Wish Board",
+  "description": "Real-time Father's Day Wish Board",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

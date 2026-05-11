@@ -96,17 +96,15 @@ function createBubble(wish) {
     const bubbleWrapper = document.createElement('div');
     bubbleWrapper.classList.add('wish-bubble');
     
-    // SVG Heart with white fill and light red (#ff9a9e) outline
+    // Polaroid structure
     bubbleWrapper.innerHTML = `
-        <svg class="heart-svg" viewBox="0 0 24 24" preserveAspectRatio="none">
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                  fill="#ffffff" stroke="#ff9a9e" stroke-width="0.4"/>
-        </svg>
+        <div class="polaroid-card">
+            <span></span>
+        </div>
     `;
     
-    const textSpan = document.createElement('span');
+    const textSpan = bubbleWrapper.querySelector('span');
     textSpan.innerText = wish.text;
-    bubbleWrapper.appendChild(textSpan);
 
     const deleteBtn = document.createElement('button');
     deleteBtn.classList.add('delete-btn');
@@ -161,9 +159,9 @@ function updatePhysics() {
         b.el.style.width = `${b.radius * 2}px`;
         b.el.style.height = `${b.radius * 2}px`;
         
-        // Font size relative to radius: strictly proportional mathematical scaling so text never spills outside the SVG borders
+        // Font size relative to radius: adjusted for polaroid
         if (b.textSpan) {
-            b.textSpan.style.fontSize = `${b.radius * 0.16}px`;
+            b.textSpan.style.fontSize = `${b.radius * 0.2}px`;
         }
 
         // Update position
@@ -288,27 +286,24 @@ function initLogo() {
     });
 }
 
-// Spawns permanent, small dark-red decorative hearts
+// Spawns permanent, small decorative stars
 function spawnDecorativeHearts(count) {
     for (let i = 0; i < count; i++) {
         const bubbleWrapper = document.createElement('div');
-        bubbleWrapper.classList.add('wish-bubble', 'decorative');
-        
-        // Blank SVG Heart with dark red fill (#8b0000)
-        bubbleWrapper.innerHTML = `
-            <svg class="heart-svg" viewBox="0 0 24 24" preserveAspectRatio="none">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                      fill="#8b0000" />
-            </svg>
-        `;
+        bubbleWrapper.classList.add('star');
         
         container.appendChild(bubbleWrapper);
         
-        let targetR = 12 + Math.random() * 15; // Small size between 12 and 27
+        let targetR = 2 + Math.random() * 3; // Small size
         const x = targetR + Math.random() * (window.innerWidth - targetR * 2);
         const y = targetR + Math.random() * (window.innerHeight - targetR * 2);
-        const vx = (Math.random() - 0.5) * 4;
-        const vy = (Math.random() - 0.5) * 4;
+        const vx = (Math.random() - 0.5) * 1; // Slower movement
+        const vy = (Math.random() - 0.5) * 1;
+        
+        bubbleWrapper.style.width = `${targetR * 2}px`;
+        bubbleWrapper.style.height = `${targetR * 2}px`;
+        bubbleWrapper.style.background = '#c0c0c0'; // Silver color
+        bubbleWrapper.style.opacity = 0.5 + Math.random() * 0.5;
         
         wishesArray.push({
             id: 'decorative_' + i,

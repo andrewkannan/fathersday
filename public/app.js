@@ -39,7 +39,12 @@ form.addEventListener('submit', (e) => {
     
     // Presentation Mode (Hide UI entirely)
     if (wishText.toLowerCase() === 'opensesame') {
-        document.querySelector('.center-content').style.display = 'none';
+        const centerContent = document.querySelector('.center-content');
+        if (centerContent) centerContent.style.display = 'none';
+        
+        const qrContainer = document.querySelector('.qr-container');
+        if (qrContainer) qrContainer.style.display = 'none';
+        
         return;
     }
 

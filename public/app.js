@@ -41,10 +41,6 @@ form.addEventListener('submit', (e) => {
     if (wishText.toLowerCase() === 'opensesame') {
         const centerContent = document.querySelector('.center-content');
         if (centerContent) centerContent.style.display = 'none';
-        
-        const qrContainer = document.querySelector('.qr-container');
-        if (qrContainer) qrContainer.style.display = 'none';
-        
         return;
     }
 

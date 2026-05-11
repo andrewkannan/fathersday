@@ -322,6 +322,13 @@ button:active {
     border-radius: 10px;
 }
 
+.powered-by {
+    font-size: 0.75rem;
+    opacity: 0.4;
+    margin-top: 20px;
+    margin-bottom: 0 !important;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 600px) {
     .qr-container {

@@ -161,7 +161,7 @@ function updatePhysics() {
         
         // Font size relative to radius: adjusted for polaroid
         if (b.textSpan) {
-            b.textSpan.style.fontSize = `${b.radius * 0.2}px`;
+            b.textSpan.style.fontSize = `${b.radius * 0.35}px`;
         }
 
         // Update position

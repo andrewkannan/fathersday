@@ -246,6 +246,7 @@ button:active {
     display: flex;
     justify-content: center;
     align-items: center;
+    text-shadow: 14px -14px 10px rgba(0, 0, 0, 0.3); /* -45 deg, 20px offset, 10px blur, 30% alpha */
 }
 
 /* Admin Delete Button */

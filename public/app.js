@@ -160,9 +160,13 @@ function updatePhysics() {
         b.el.style.width = `${b.radius * 2}px`;
         b.el.style.height = `${b.radius * 2}px`;
         
-        // Font size relative to radius: adjusted for polaroid
+        // Font size relative to radius and text length
         if (b.textSpan) {
-            b.textSpan.style.fontSize = `${b.radius * 0.25}px`;
+            const textLen = b.textSpan.innerText.length || 1;
+            // The longer the text, the smaller the font size relative to the radius
+            let dynamicSize = (b.radius * 1.4) / Math.sqrt(textLen);
+            // Cap the maximum font size so 1-letter words don't overflow
+            b.textSpan.style.fontSize = `${Math.min(b.radius * 0.4, dynamicSize)}px`;
         }
 
         // Update position

@@ -30,14 +30,19 @@
         <div class="glass-panel">
             <h1>Blessed Father's Day</h1>
             <p>A Father’s Love Leads Generations</p>
+            <p class="helper-text">Add a photo of you and your dad to create a memory postcard!</p>
             <form id="wish-form">
-                <input type="text" id="wish-input" autocomplete="off" placeholder="Write your wish..." required maxlength="70" />
+                <input type="text" id="wish-input" autocomplete="off" placeholder="Write a short message for him..." required maxlength="70" />
                 <div class="action-buttons">
-                    <label for="wish-image" class="image-upload-btn">📷 Add Photo</label>
+                    <label for="wish-image" class="image-upload-btn">📷 Attach Photo</label>
                     <input type="file" id="wish-image" accept="image/*" style="display: none;" />
                     <button type="submit">✨ Send Wish</button>
                 </div>
-                <div id="image-preview-text"></div>
+                <div id="image-preview-container" style="display: none;">
+                    <img id="image-preview-img" src="" alt="Preview" />
+                    <span id="image-preview-text"></span>
+                    <button type="button" id="remove-image-btn">✖</button>
+                </div>
             </form>
             <p class="powered-by">powered by ccc bilingual</p>
         </div>

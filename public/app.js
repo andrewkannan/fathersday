@@ -32,21 +32,35 @@ let baseRadius = 80;
 
 // Handle image selection preview
 const imageInput = document.getElementById('wish-image');
+const previewContainer = document.getElementById('image-preview-container');
+const previewImg = document.getElementById('image-preview-img');
 const previewText = document.getElementById('image-preview-text');
+const removeImageBtn = document.getElementById('remove-image-btn');
 let selectedFile = null;
 
 if (imageInput) {
     imageInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
             selectedFile = e.target.files[0];
-            previewText.innerText = `Selected: ${selectedFile.name}`;
-            previewText.style.display = 'block';
+            previewText.innerText = selectedFile.name;
+            previewImg.src = URL.createObjectURL(selectedFile);
+            previewContainer.style.display = 'flex';
         } else {
-            selectedFile = null;
-            previewText.innerText = '';
-            previewText.style.display = 'none';
+            clearImageSelection();
         }
     });
+}
+
+if (removeImageBtn) {
+    removeImageBtn.addEventListener('click', clearImageSelection);
+}
+
+function clearImageSelection() {
+    selectedFile = null;
+    if (imageInput) imageInput.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (previewImg) previewImg.src = '';
+    if (previewText) previewText.innerText = '';
 }
 
 // Listen for submission
@@ -101,9 +115,7 @@ form.addEventListener('submit', async (e) => {
         alert('Your wish has been submitted.');
         
         input.value = '';
-        if (imageInput) imageInput.value = '';
-        selectedFile = null;
-        if (previewText) previewText.style.display = 'none';
+        clearImageSelection();
     }
 });
 

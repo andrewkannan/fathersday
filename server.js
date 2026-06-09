@@ -50,7 +50,10 @@ app.get('/generate-presigned-url', async (req, res) => {
         const fileType = req.query.fileType;
         if (!fileName || !fileType) return res.status(400).send('Missing fileName or fileType');
 
-        const uniqueFileName = `${Date.now()}-${fileName}`;
+        // Sanitize filename to avoid S3 Signature or URL encoding errors with special characters like ^
+        const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const uniqueFileName = `${Date.now()}-${sanitizedFileName}`;
+        
         const command = new PutObjectCommand({
             Bucket: BUCKET_NAME,
             Key: uniqueFileName,

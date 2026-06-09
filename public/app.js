@@ -87,19 +87,29 @@ form.addEventListener('submit', async (e) => {
                 btn.innerText = 'Uploading...';
                 
                 const response = await fetch(`/generate-presigned-url?fileName=${encodeURIComponent(selectedFile.name)}&fileType=${encodeURIComponent(selectedFile.type)}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server Error: ${response.status} - ${errorText}`);
+                }
+                
                 const data = await response.json();
                 
-                await fetch(data.presignedUrl, {
+                const s3Response = await fetch(data.presignedUrl, {
                     method: 'PUT',
                     headers: { 'Content-Type': selectedFile.type },
                     body: selectedFile
                 });
                 
+                if (!s3Response.ok) {
+                    throw new Error(`S3 Upload Error: ${s3Response.status} (Check CORS settings)`);
+                }
+                
                 imageUrl = data.publicUrl;
                 btn.innerText = oldText;
             } catch (err) {
                 console.error('Image upload failed', err);
-                alert('Failed to upload image. Sending text only.');
+                alert('Failed to upload image:\n' + err.message + '\n\nSending text only.');
             }
         }
 

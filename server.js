@@ -58,6 +58,7 @@ app.get('/generate-presigned-url', async (req, res) => {
             Bucket: BUCKET_NAME,
             Key: uniqueFileName,
             ContentType: fileType,
+            ACL: 'public-read'
         });
 
         const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 60 });

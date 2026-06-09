@@ -129,10 +129,15 @@ io.on('connection', async (socket) => {
         if (password === ADMIN_PASSWORD) {
             socket.join('admin_room');
             if (pool) {
-                const result = await pool.query('SELECT * FROM wishes WHERE approved = false ORDER BY timestamp ASC');
-                callback({ success: true, wishes: result.rows });
+                const pending = await pool.query('SELECT * FROM wishes WHERE approved = false ORDER BY timestamp ASC');
+                const approved = await pool.query('SELECT * FROM wishes WHERE approved = true ORDER BY timestamp ASC');
+                callback({ success: true, pendingWishes: pending.rows, approvedWishes: approved.rows });
             } else {
-                callback({ success: true, wishes: memoryWishes.filter(w => !w.approved) });
+                callback({ 
+                    success: true, 
+                    pendingWishes: memoryWishes.filter(w => !w.approved),
+                    approvedWishes: memoryWishes.filter(w => w.approved)
+                });
             }
         } else {
             callback({ success: false, message: 'Invalid password' });

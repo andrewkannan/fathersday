@@ -8,13 +8,22 @@ const errorMsg = document.getElementById('login-error');
 const wishesGrid = document.getElementById('wishes-grid');
 const logoutBtn = document.getElementById('logout-btn');
 
+const tabPending = document.getElementById('tab-pending');
+const tabApproved = document.getElementById('tab-approved');
+
+let pendingWishes = [];
+let approvedWishes = [];
+let currentTab = 'pending';
+
 loginBtn.addEventListener('click', () => {
     const pwd = passwordInput.value;
     socket.emit('admin_login', pwd, (response) => {
         if (response.success) {
             loginContainer.style.display = 'none';
             dashboardContainer.style.display = 'block';
-            renderWishes(response.wishes);
+            pendingWishes = response.pendingWishes;
+            approvedWishes = response.approvedWishes;
+            renderGrid();
         } else {
             errorMsg.style.display = 'block';
         }
@@ -31,27 +40,51 @@ logoutBtn.addEventListener('click', () => {
     window.location.reload();
 });
 
+tabPending.addEventListener('click', () => {
+    currentTab = 'pending';
+    tabPending.classList.add('active');
+    tabApproved.classList.remove('active');
+    renderGrid();
+});
+
+tabApproved.addEventListener('click', () => {
+    currentTab = 'approved';
+    tabApproved.classList.add('active');
+    tabPending.classList.remove('active');
+    renderGrid();
+});
+
 socket.on('admin_new_wish', (wish) => {
-    // Only add if we are logged in and looking at dashboard
-    if (dashboardContainer.style.display === 'block') {
-        const existing = document.getElementById(`wish-${wish.id}`);
-        if (!existing) {
-            appendWishCard(wish);
-        }
+    pendingWishes.push(wish);
+    if (currentTab === 'pending' && dashboardContainer.style.display === 'block') {
+        appendWishCard(wish);
     }
 });
 
 socket.on('admin_wish_approved', (wishId) => {
-    removeWishCard(wishId);
+    const wishIndex = pendingWishes.findIndex(w => w.id === wishId);
+    if (wishIndex !== -1) {
+        const wish = pendingWishes.splice(wishIndex, 1)[0];
+        wish.approved = true;
+        approvedWishes.push(wish);
+    }
+    if (currentTab === 'pending') {
+        removeWishCard(wishId);
+    } else if (currentTab === 'approved' && dashboardContainer.style.display === 'block') {
+        renderGrid();
+    }
 });
 
 socket.on('admin_wish_rejected', (wishId) => {
+    pendingWishes = pendingWishes.filter(w => w.id !== wishId);
+    approvedWishes = approvedWishes.filter(w => w.id !== wishId);
     removeWishCard(wishId);
 });
 
-function renderWishes(wishes) {
+function renderGrid() {
     wishesGrid.innerHTML = '';
-    wishes.forEach(appendWishCard);
+    const list = currentTab === 'pending' ? pendingWishes : approvedWishes;
+    list.forEach(appendWishCard);
 }
 
 function appendWishCard(wish) {
@@ -65,12 +98,12 @@ function appendWishCard(wish) {
     }
     html += `<div class="wish-text">${wish.text}</div>`;
     
-    html += `
-        <div class="card-actions">
-            <button class="approve-btn" onclick="approveWish('${wish.id}')">Approve</button>
-            <button class="reject-btn" onclick="rejectWish('${wish.id}')">Reject</button>
-        </div>
-    `;
+    html += `<div class="card-actions">`;
+    if (currentTab === 'pending') {
+        html += `<button class="approve-btn" onclick="approveWish('${wish.id}')">Approve</button>`;
+    }
+    html += `<button class="reject-btn" onclick="rejectWish('${wish.id}')">Delete</button>
+        </div>`;
     
     card.innerHTML = html;
     wishesGrid.appendChild(card);

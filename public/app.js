@@ -32,8 +32,27 @@ let baseRadius = 80;
 
 let isAdmin = false;
 
+// Handle image selection preview
+const imageInput = document.getElementById('wish-image');
+const previewText = document.getElementById('image-preview-text');
+let selectedFile = null;
+
+if (imageInput) {
+    imageInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+            selectedFile = e.target.files[0];
+            previewText.innerText = `Selected: ${selectedFile.name}`;
+            previewText.style.display = 'block';
+        } else {
+            selectedFile = null;
+            previewText.innerText = '';
+            previewText.style.display = 'none';
+        }
+    });
+}
+
 // Listen for submission
-form.addEventListener('submit', (e) => {
+form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const wishText = input.value.trim();
     
@@ -58,9 +77,37 @@ form.addEventListener('submit', (e) => {
         return;
     }
     
-    if (wishText) {
-        socket.emit('new_wish', wishText);
+    if (wishText || selectedFile) {
+        let imageUrl = null;
+        if (selectedFile) {
+            try {
+                // Change button text to show loading
+                const btn = form.querySelector('button[type="submit"]');
+                const oldText = btn.innerText;
+                btn.innerText = 'Uploading...';
+                
+                const response = await fetch(`/generate-presigned-url?fileName=${encodeURIComponent(selectedFile.name)}&fileType=${encodeURIComponent(selectedFile.type)}`);
+                const data = await response.json();
+                
+                await fetch(data.presignedUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': selectedFile.type },
+                    body: selectedFile
+                });
+                
+                imageUrl = data.publicUrl;
+                btn.innerText = oldText;
+            } catch (err) {
+                console.error('Image upload failed', err);
+                alert('Failed to upload image. Sending text only.');
+            }
+        }
+
+        socket.emit('new_wish', { text: wishText, image: imageUrl });
         input.value = '';
+        if (imageInput) imageInput.value = '';
+        selectedFile = null;
+        if (previewText) previewText.style.display = 'none';
     }
 });
 
@@ -100,6 +147,7 @@ function createBubble(wish) {
     // Polaroid structure
     bubbleWrapper.innerHTML = `
         <div class="polaroid-card">
+            ${wish.image ? `<img src="${wish.image}" class="polaroid-image" />` : ''}
             <span></span>
         </div>
     `;
@@ -131,10 +179,12 @@ function createBubble(wish) {
     // We apply a gentle scale-down for mobile devices to prevent completely dominating the screen
     let viewportScale = window.innerWidth < 600 ? 0.75 : 1;
     // Keep the polaroid cards more compact since we now auto-size the fonts.
-    let calculatedR = 55 + (wish.text.length * 0.3);
+    let baseCalculatedR = 55 + (wish.text ? wish.text.length * 0.3 : 0);
+    // If there is an image, make the bubble significantly larger to fit the picture
+    let calculatedR = wish.image ? baseCalculatedR + 40 : baseCalculatedR;
     
     // Cap maximum radius so the boards don't get huge
-    let targetR = Math.max(55 * viewportScale, Math.min(85 * viewportScale, calculatedR * viewportScale));
+    let targetR = Math.max(55 * viewportScale, Math.min((wish.image ? 120 : 85) * viewportScale, calculatedR * viewportScale));
 
     // Shrink all existing wishes so the screen doesn't fill up permanently
     wishesArray.forEach(b => {

@@ -3,7 +3,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const { Pool } = require('pg');
-
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -24,12 +25,47 @@ if (process.env.DATABASE_URL) {
             text VARCHAR(255) NOT NULL,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+        ALTER TABLE wishes ADD COLUMN IF NOT EXISTS image TEXT;
     `).then(() => {
         console.log("PostgreSQL database connected and schema is ready!");
     }).catch(err => console.error("Database schema init error:", err));
 } else {
     console.log("No DATABASE_URL found. Falling back to temporary in-memory database.");
 }
+
+// S3 Setup
+const s3Client = new S3Client({
+    region: process.env.AWS_REGION || 'us-east-1',
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+    }
+});
+const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'fathersday-wishes';
+
+// Generate presigned URL for direct S3 upload
+app.get('/generate-presigned-url', async (req, res) => {
+    try {
+        const fileName = req.query.fileName;
+        const fileType = req.query.fileType;
+        if (!fileName || !fileType) return res.status(400).send('Missing fileName or fileType');
+
+        const uniqueFileName = `${Date.now()}-${fileName}`;
+        const command = new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: uniqueFileName,
+            ContentType: fileType,
+        });
+
+        const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 60 });
+        const publicUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${uniqueFileName}`;
+        
+        res.json({ presignedUrl, publicUrl });
+    } catch (err) {
+        console.error('Error generating presigned URL:', err);
+        res.status(500).json({ error: 'Failed to generate presigned URL' });
+    }
+});
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -53,17 +89,19 @@ io.on('connection', async (socket) => {
     }
 
     // Handle incoming new wishes
-    socket.on('new_wish', async (wishText) => {
+    socket.on('new_wish', async (wishData) => {
         const id = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+        const isString = typeof wishData === 'string';
         const wish = {
             id,
-            text: wishText,
+            text: isString ? wishData : wishData.text,
+            image: isString ? null : (wishData.image || null),
             timestamp: new Date()
         };
         
         if (pool) {
             try {
-                await pool.query('INSERT INTO wishes (id, text, timestamp) VALUES ($1, $2, $3)', [wish.id, wish.text, wish.timestamp]);
+                await pool.query('INSERT INTO wishes (id, text, image, timestamp) VALUES ($1, $2, $3, $4)', [wish.id, wish.text, wish.image, wish.timestamp]);
                 io.emit('receive_wish', wish);
             } catch (err) {
                 console.error("Could not insert wish", err);

@@ -30,8 +30,6 @@ window.addEventListener('DOMContentLoaded', () => {
 const wishesArray = [];
 let baseRadius = 80;
 
-let isAdmin = false;
-
 // Handle image selection preview
 const imageInput = document.getElementById('wish-image');
 const previewText = document.getElementById('image-preview-text');
@@ -60,20 +58,6 @@ form.addEventListener('submit', async (e) => {
     if (wishText.toLowerCase() === 'opensesame') {
         const centerContent = document.querySelector('.center-content');
         if (centerContent) centerContent.style.display = 'none';
-        return;
-    }
-
-    // Check for admin super secret code
-    if (wishText.toLowerCase() === 'admin123') {
-        isAdmin = !isAdmin;
-        input.value = '';
-        if (isAdmin) {
-            container.classList.add('admin-mode');
-            alert('Admin mode unlocked: You can now delete wishes by clicking their X button.');
-        } else {
-            container.classList.remove('admin-mode');
-            alert('Admin mode disabled.');
-        }
         return;
     }
     
@@ -114,6 +98,8 @@ form.addEventListener('submit', async (e) => {
         }
 
         socket.emit('new_wish', { text: wishText, image: imageUrl });
+        alert('Your wish has been submitted.');
+        
         input.value = '';
         if (imageInput) imageInput.value = '';
         selectedFile = null;
@@ -164,15 +150,6 @@ function createBubble(wish) {
     
     const textSpan = bubbleWrapper.querySelector('span');
     textSpan.innerText = wish.text;
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.classList.add('delete-btn');
-    deleteBtn.innerText = 'X';
-    deleteBtn.onclick = (e) => {
-        e.stopPropagation(); // Avoid triggering parents
-        socket.emit('delete_wish', wish.id);
-    };
-    bubbleWrapper.appendChild(deleteBtn);
 
     container.appendChild(bubbleWrapper);
 
@@ -238,21 +215,13 @@ function updatePhysics() {
         // Apply drag (so they don't bounce too fast indefinitely)
         let speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
         
-        if (isAdmin) {
-            // Apply heavy brakes in Admin Mode so they are easy to click
-            if (speed > 0.2) {
-                b.vx *= 0.85;
-                b.vy *= 0.85;
-            }
-        } else {
-            // Normal drifting speeds when not admin (Slowed down significantly to be smooth and readable)
-            if (speed < 0.4) {
-                b.vx *= 1.05;
-                b.vy *= 1.05;
-            } else if (speed > 1.5) {
-                b.vx *= 0.95;
-                b.vy *= 0.95;
-            }
+        // Normal drifting speeds (Slowed down significantly to be smooth and readable)
+        if (speed < 0.4) {
+            b.vx *= 1.05;
+            b.vy *= 1.05;
+        } else if (speed > 1.5) {
+            b.vx *= 0.95;
+            b.vy *= 0.95;
         }
 
         // Bounce off walls

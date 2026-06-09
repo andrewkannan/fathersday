@@ -26,6 +26,8 @@ if (process.env.DATABASE_URL) {
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         ALTER TABLE wishes ADD COLUMN IF NOT EXISTS image TEXT;
+        ALTER TABLE wishes ADD COLUMN IF NOT EXISTS approved BOOLEAN DEFAULT FALSE;
+        UPDATE wishes SET approved = TRUE WHERE approved IS NULL;
     `).then(() => {
         console.log("PostgreSQL database connected and schema is ready!");
     }).catch(err => console.error("Database schema init error:", err));
@@ -74,6 +76,10 @@ app.get('/generate-presigned-url', async (req, res) => {
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 // In-memory array fallback
 let memoryWishes = [];
 
@@ -83,10 +89,10 @@ io.on('connection', async (socket) => {
     try {
         // Send existing wishes to the newly connected user
         if (pool) {
-            const result = await pool.query('SELECT * FROM wishes ORDER BY timestamp ASC');
+            const result = await pool.query('SELECT * FROM wishes WHERE approved = true ORDER BY timestamp ASC');
             socket.emit('load_wishes', result.rows);
         } else {
-            socket.emit('load_wishes', memoryWishes);
+            socket.emit('load_wishes', memoryWishes.filter(w => w.approved));
         }
     } catch (err) {
         console.error("Error loading wishes on connect", err);
@@ -100,33 +106,77 @@ io.on('connection', async (socket) => {
             id,
             text: isString ? wishData : wishData.text,
             image: isString ? null : (wishData.image || null),
+            approved: false,
             timestamp: new Date()
         };
         
         if (pool) {
             try {
-                await pool.query('INSERT INTO wishes (id, text, image, timestamp) VALUES ($1, $2, $3, $4)', [wish.id, wish.text, wish.image, wish.timestamp]);
-                io.emit('receive_wish', wish);
+                await pool.query('INSERT INTO wishes (id, text, image, approved, timestamp) VALUES ($1, $2, $3, $4, $5)', [wish.id, wish.text, wish.image, wish.approved, wish.timestamp]);
+                io.to('admin_room').emit('admin_new_wish', wish);
             } catch (err) {
                 console.error("Could not insert wish", err);
             }
         } else {
             memoryWishes.push(wish);
-            io.emit('receive_wish', wish);
+            io.to('admin_room').emit('admin_new_wish', wish);
         }
     });
 
-    // Handle wish deletion (Admin capability)
-    socket.on('delete_wish', async (wishId) => {
+    const ADMIN_PASSWORD = 'appailoveyou';
+
+    socket.on('admin_login', async (password, callback) => {
+        if (password === ADMIN_PASSWORD) {
+            socket.join('admin_room');
+            if (pool) {
+                const result = await pool.query('SELECT * FROM wishes WHERE approved = false ORDER BY timestamp ASC');
+                callback({ success: true, wishes: result.rows });
+            } else {
+                callback({ success: true, wishes: memoryWishes.filter(w => !w.approved) });
+            }
+        } else {
+            callback({ success: false, message: 'Invalid password' });
+        }
+    });
+
+    socket.on('admin_approve_wish', async (wishId) => {
+        if (!socket.rooms.has('admin_room')) return;
+        
+        if (pool) {
+            try {
+                await pool.query('UPDATE wishes SET approved = true WHERE id = $1', [wishId]);
+                const result = await pool.query('SELECT * FROM wishes WHERE id = $1', [wishId]);
+                if (result.rows.length > 0) {
+                    io.emit('receive_wish', result.rows[0]);
+                    io.to('admin_room').emit('admin_wish_approved', wishId);
+                }
+            } catch (err) {
+                console.error("Error approving wish:", err);
+            }
+        } else {
+            const wish = memoryWishes.find(w => w.id === wishId);
+            if (wish) {
+                wish.approved = true;
+                io.emit('receive_wish', wish);
+                io.to('admin_room').emit('admin_wish_approved', wishId);
+            }
+        }
+    });
+
+    socket.on('admin_reject_wish', async (wishId) => {
+        if (!socket.rooms.has('admin_room')) return;
+        
         if (pool) {
             try {
                 await pool.query('DELETE FROM wishes WHERE id = $1', [wishId]);
+                io.to('admin_room').emit('admin_wish_rejected', wishId);
                 io.emit('wish_deleted', wishId);
             } catch (err) {
-                console.error("Could not delete wish", err);
+                console.error("Error rejecting wish:", err);
             }
         } else {
             memoryWishes = memoryWishes.filter(w => w.id !== wishId);
+            io.to('admin_room').emit('admin_wish_rejected', wishId);
             io.emit('wish_deleted', wishId);
         }
     });
